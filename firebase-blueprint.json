@@ -1,0 +1,87 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User statistics and information.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "avatar": { "type": "string" },
+        "rank": { "type": "string", "enum": ["Civic Guardian", "Community Sentinel", "Active Citizen"] },
+        "reportsSubmitted": { "type": "integer" },
+        "reportsFixed": { "type": "integer" },
+        "rankScore": { "type": "integer" }
+      },
+      "required": ["name", "email", "avatar", "rank", "reportsSubmitted", "reportsFixed", "rankScore"]
+    },
+    "Issue": {
+      "title": "Civic Issue",
+      "description": "A community-reported civic issue.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "location": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "status": { "type": "string", "enum": ["Open", "Fixed", "Rejected"] },
+        "likesCount": { "type": "integer" },
+        "notifiedAuthority": { "type": "boolean" },
+        "reporterName": { "type": "string" },
+        "reporterRank": { "type": "string" },
+        "reporterAvatar": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "imageColor": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "aiVerified": { "type": "boolean" },
+        "isUserCreated": { "type": "boolean" },
+        "reporterId": { "type": "string" },
+        "fixedImage": { "type": "string" },
+        "fixedTime": { "type": "string" }
+      },
+      "required": ["title", "location", "description", "category", "status", "likesCount", "notifiedAuthority", "reporterName", "reporterRank", "reporterAvatar", "createdAt", "aiVerified", "reporterId"]
+    },
+    "Like": {
+      "title": "Like",
+      "description": "An indicator that a user liked an issue.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "likedAt": { "type": "string" }
+      },
+      "required": ["userId", "likedAt"]
+    },
+    "Comment": {
+      "title": "Civic Comment",
+      "description": "A comment on a civic issue.",
+      "type": "object",
+      "properties": {
+        "issueId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userAvatar": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["issueId", "userName", "userAvatar", "text", "createdAt", "userId"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Global user profiles and score tracking."
+    },
+    "issues/{issueId}": {
+      "schema": "Issue",
+      "description": "Civic issues posted by community members."
+    },
+    "issues/{issueId}/likes/{userId}": {
+      "schema": "Like",
+      "description": "Tracks users who liked a specific issue."
+    },
+    "comments/{commentId}": {
+      "schema": "Comment",
+      "description": "Comments left on issues."
+    }
+  }
+}

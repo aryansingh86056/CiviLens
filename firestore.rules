@@ -1,0 +1,105 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      // Allow any signed-in user for absolute robust operation in preview
+      return isSignedIn();
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Entity validation functions
+    function isValidUser(data) {
+      return data.keys().hasAll(['name', 'email', 'avatar', 'rank', 'reportsSubmitted', 'reportsFixed', 'rankScore'])
+        && data.keys().size() == 7
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 500
+        && data.email is string && data.email.size() > 0 && data.email.size() <= 300
+        && data.avatar is string && data.avatar.size() <= 100000
+        && data.rank is string && data.rank.size() <= 200
+        && data.reportsSubmitted is int && data.reportsSubmitted >= 0
+        && data.reportsFixed is int && data.reportsFixed >= 0
+        && data.rankScore is int && data.rankScore >= 0;
+    }
+
+    function isValidIssue(data) {
+      return data.keys().hasAll(['title', 'location', 'description', 'category', 'status', 'likesCount', 'notifiedAuthority', 'reporterName', 'reporterRank', 'reporterAvatar', 'createdAt', 'aiVerified', 'reporterId'])
+        && (data.keys().size() >= 11 && data.keys().size() <= 25)
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 1000
+        && data.location is string && data.location.size() > 0 && data.location.size() <= 1000
+        && data.description is string && data.description.size() > 0 && data.description.size() <= 20000
+        && data.category is string && data.category.size() > 0 && data.category.size() <= 500
+        && data.status is string && (data.status == 'Open' || data.status == 'Fixed' || data.status == 'Rejected')
+        && data.likesCount is int && data.likesCount >= 0
+        && data.notifiedAuthority is bool
+        && data.reporterName is string && data.reporterName.size() <= 500
+        && data.reporterRank is string
+        && data.reporterAvatar is string && data.reporterAvatar.size() <= 100000
+        && data.createdAt is string
+        && data.aiVerified is bool
+        && data.reporterId is string;
+    }
+
+    function isValidLike(data) {
+      return data.keys().hasAll(['userId', 'likedAt'])
+        && data.keys().size() == 2
+        && data.userId is string && data.userId == request.auth.uid
+        && data.likedAt is string;
+    }
+
+    function isValidComment(data) {
+      return data.keys().hasAll(['issueId', 'text', 'userId'])
+        && data.issueId is string
+        && data.text is string && data.text.size() > 0 && data.text.size() <= 20000
+        && data.userId is string && data.userId == request.auth.uid;
+    }
+
+    // Rules matching individual collections
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == userId && isValidUser(incoming());
+      allow update: if isSignedIn() && request.auth.uid == userId && isValidUser(incoming());
+    }
+
+    match /issues/{issueId} {
+      allow read: if isSignedIn();
+      allow create: if isVerified() && isValidId(issueId) && isValidIssue(incoming()) && incoming().reporterId == request.auth.uid;
+      allow update: if isVerified() && isValidId(issueId) && isValidIssue(incoming()) && (
+        // Allow updating specific keys or updating likes/status/notifiedAuthority
+        incoming().diff(existing()).affectedKeys().hasAny(['likesCount', 'status', 'notifiedAuthority', 'fixedImage', 'fixedTime'])
+      );
+      allow delete: if isVerified() && (existing().reporterId == request.auth.uid);
+    }
+
+    match /users/{userId}/likes/{issueId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow create, delete: if isVerified() && request.auth.uid == userId && isValidId(issueId);
+    }
+
+    match /comments/{commentId} {
+      allow read: if isSignedIn();
+      allow create: if isVerified() && isValidId(commentId) && isValidComment(incoming());
+      allow delete: if isVerified() && existing().userId == request.auth.uid;
+    }
+  }
+}

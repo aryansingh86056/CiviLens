@@ -1,0 +1,6 @@
+{
+  "name": "CiviLens",
+  "description": "A modern, community-driven civic issue reporting platform empowering citizens to report, track, and solve local infrastructure problems.",
+  "requestFramePermissions": ["geolocation", "camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
